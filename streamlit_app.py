@@ -1,11 +1,12 @@
 import streamlit as st
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import ast
 
-# ===== 데이터 불러오기 =====
+# ===== call data and preprocessing =====
 
-def load_data():
+def ready_data():
     assess_value = pd.read_excel("assess_value.xlsx")
     fire = pd.read_excel("fire.xlsx")
     singleFire = pd.read_excel("singleFire.xlsx")
@@ -16,40 +17,43 @@ def load_data():
     singleFire["month"] = singleFire["Started"].dt.month
 
     # County list 변환
-    singleFire["Counties"] = singleFire["Counties"].apply(
-        lambda x: ast.literal_eval(x) if isinstance(x, str) else []
-    )
+    singleFire["Counties"] = singleFire["Counties"].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else [])
 
-    # 카운티별 평균 NetTotal
+    # average NetTotal per county
     avg_netTotal = assess_value.groupby("County")["NetTotal"].mean().reset_index()
 
     # 화재별 평균 재산 가치
     def merge_county(counties):
-        values = []
-        for county in counties:
-            match = avg_netTotal.loc[avg_netTotal["County"] == county, "NetTotal"]
-            if not match.empty:
-                values.append(match.iloc[0])
-        return sum(values)/len(values) if values else None
+        value = 0
+        if len(counties) != 0:
+            for county in counties:
+                # when NetTotal county is not in singleFire
+                try:
+                    netTotal = avg_netTotal[avg_netTotal['County'] == county]['NetTotal'].item()
+                    value += netTotal
+                except:
+                    pass
+            value /= len(counties)
+            return value if value else np.nan
 
     singleFire["NetAverage"] = singleFire["Counties"].apply(merge_county)
 
-    # Property Loss Score
+    # propertyLoss
     singleFire["StructuresDestroyed"] = singleFire["StructuresDestroyed"].fillna(0)
     singleFire["StructuresDamaged"] = singleFire["StructuresDamaged"].fillna(0)
-    singleFire["PropertyLossScore"] = (
-        singleFire["StructuresDestroyed"] + singleFire["StructuresDamaged"]
-    )
+    singleFire["PropertyLossScore"] = (singleFire["StructuresDestroyed"] + singleFire["StructuresDamaged"])
     return singleFire
 
-df = load_data()
+df = ready_data()
+filtered = df.__deepcopy__()
+filtered['year'] = filtered['Started'].dt.year
+filtered['month'] = filtered['Started'].dt.month
 
 # ===== Sidebar =====
 st.sidebar.header("Filter Options")
-year_filter = st.sidebar.multiselect("Select Year", sorted(df["year"].dropna().unique()))
-county_filter = st.sidebar.multiselect("Select County", sorted(set(sum(df["Counties"], []))))
+year_filter = st.sidebar.multiselect("Select Year", sorted(filtered["year"].dropna().unique()))
+county_filter = st.sidebar.multiselect("Select County", sorted(set(sum(filtered["Counties"], []))))
 
-filtered = df.copy()
 if year_filter:
     filtered = filtered[filtered["year"].isin(year_filter)]
 if county_filter:
