@@ -132,7 +132,7 @@ if "Latitude" in filtered.columns and "Longitude" in filtered.columns:
                                 hover_name="Name", mapbox_style="carto-positron", zoom=4)
     st.plotly_chart(fig_map, use_container_width=True)
 
-# ===== Top 5 Fires =====
-st.subheader("Top 5 Fires by Property Loss")
-top5 = filtered.nlargest(5, "PropertyLoss")[["Name","year","AcresBurned","PropertyLoss","NetAverage"]]
-st.dataframe(top5)
+# # ===== Top 5 Fires =====
+# st.subheader("Top 5 Fires by Property Loss")
+# top5 = filtered.nlargest(5, "PropertyLoss")[["Name","year","AcresBurned","PropertyLoss","NetAverage"]]
+# st.dataframe(top5)
